@@ -7,28 +7,26 @@ interface CircuitActions {
   setPin: (component: 'led' | 'btn', pin: PinID) => void;
   toggleSimulation: () => void;
   toggleCodeView: () => void;
-  setPinLevel: (pin: PinID, level: 'HIGH' | 'LOW') => void;
+  toggleWiring: () => void;
+  setLedState: (isOn: boolean) => void;
 }
 
-const INITIAL_PINS = {
-  2: 'LOW', 3: 'LOW', 4: 'LOW', 5: 'LOW', 6: 'LOW', 
-  7: 'LOW', 8: 'LOW', 9: 'LOW', 10: 'LOW', 11: 'LOW', 
-  12: 'LOW', 13: 'LOW'
-} as const;
+const getInitialPins = () => {
+  const pins: any = {};
+  [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].forEach(p => pins[p] = 'LOW');
+  return pins;
+};
 
 export const useCircuitStore = create<CircuitState & CircuitActions>((set, get) => ({
-  // Task 1: Initial Placement State
   isUnoPlaced: false,
   isLedPlaced: false,
   isBtnPlaced: false,
-
-  // Task 2: Mandatory Defaults (LED -> 10, Btn -> 2)
+  isWired: false,
   ledPin: 10,
   btnPin: 2,
-
-  // Task 3: Simulation State
   isRunning: false,
-  pinLevels: { ...INITIAL_PINS },
+  
+  pinLevels: getInitialPins(), 
   showCode: false,
 
   placeComponent: (type) => {
@@ -39,27 +37,30 @@ export const useCircuitStore = create<CircuitState & CircuitActions>((set, get) 
 
   resetCanvas: () => set({ 
     isUnoPlaced: false, isLedPlaced: false, isBtnPlaced: false, 
-    isRunning: false, pinLevels: { ...INITIAL_PINS } 
+    isRunning: false, isWired: false, 
+    pinLevels: getInitialPins() 
   }),
 
   setPin: (component, newPin) => {
     const state = get();
-    // Task 2 Constraint: Prevent Duplicate Assignment
-    if (component === 'led' && state.btnPin === newPin) return; 
-    if (component === 'btn' && state.ledPin === newPin) return;
-
-    set({ [component === 'led' ? 'ledPin' : 'btnPin']: newPin });
+    const cleanLevels = { ...state.pinLevels, [newPin]: 'LOW' };
+    set({ 
+      [component === 'led' ? 'ledPin' : 'btnPin']: newPin,
+      pinLevels: cleanLevels
+    });
   },
 
   toggleSimulation: () => set((state) => {
-    if (!state.isUnoPlaced || !state.isLedPlaced || !state.isBtnPlaced) return state; // Only run if complete
-    if (state.isRunning) return { isRunning: false, pinLevels: { ...INITIAL_PINS } };
+    if (state.isRunning) {
+      return { isRunning: false, pinLevels: getInitialPins() };
+    }
     return { isRunning: true };
   }),
 
+  toggleWiring: () => set((state) => ({ isWired: !state.isWired })),
   toggleCodeView: () => set((state) => ({ showCode: !state.showCode })),
 
-  setPinLevel: (pin, level) => set((state) => ({
-    pinLevels: { ...state.pinLevels, [pin]: level }
+  setLedState: (isOn) => set((state) => ({
+    pinLevels: { ...state.pinLevels, [state.ledPin]: isOn ? 'HIGH' : 'LOW' }
   })),
 }));
